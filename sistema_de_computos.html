@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desarrollo CMS - Centro de Cómputos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Ocultar flechas en inputs numéricos */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        
+        /* Toast Notifications */
+        #toast-container { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { padding: 1rem 1.5rem; border-radius: 0.5rem; color: white; min-width: 300px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; animation: slideUp 0.3s ease-out forwards; font-weight: 500;}
+        .toast.success { background-color: #10b981; }
+        .toast.error { background-color: #ef4444; }
+        .toast.info { background-color: #3b82f6; }
+        .toast.fade-out { animation: slideDown 0.3s ease-in forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+
+        /* Modal custom */
+        .modal-overlay { background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Pantalla de Inicio (Landing Screen) -->
+    <div id="landingScreen" class="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="text-center mb-8">
+            <div class="w-24 h-24 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(37,99,235,0.4)] transform rotate-3">
+                <i class="fa-solid fa-code text-5xl text-white -rotate-3"></i>
+            </div>
+            <h1 class="text-4xl md:text-6xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300 mb-3">Desarrollo CMS</h1>
+            <p class="text-slate-400 text-lg md:text-xl font-medium tracking-widest uppercase">Centro de Cómputos</p>
+        </div>
+        <button onclick="enterSystem()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl text-xl font-bold shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-all hover:scale-105 flex items-center gap-3">
+            Ingresa ahora <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar / Menú de Navegación -->
+    <aside class="w-full md:w-64 bg-slate-900 text-white flex flex-col transition-all duration-300 z-20 shadow-xl flex-shrink-0">
+        <div class="p-6 text-center border-b border-slate-800">
+            <div class="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-900/50 transform rotate-3">
+                <i class="fa-solid fa-code text-3xl text-white -rotate-3"></i>
+            </div>
+            <h1 class="text-xl font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">Desarrollo CMS</h1>
+            <p class="text-slate-400 text-xs mt-1 font-medium tracking-widest uppercase">Centro de Cómputos</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1" id="navMenu">
+            <button onclick="switchTab('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors bg-blue-600 text-white shadow-md" data-target="dashboard">
+                <i class="fa-solid fa-chart-pie w-5"></i> <span>Escrutinio en vivo</span>
+            </button>
+            <button onclick="switchTab('planilla')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="planilla">
+                <i class="fa-solid fa-table-list w-5"></i> <span>Planilla Escuela</span>
+            </button>
+            <button onclick="switchTab('carga')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="carga">
+                <i class="fa-solid fa-file-pen w-5"></i> <span>Carga de Acta Individual</span>
+            </button>
+            <button onclick="switchTab('auditoria')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="auditoria">
+                <i class="fa-solid fa-list-check w-5"></i> <span>Mesas Registradas</span>
+            </button>
+            <button onclick="switchTab('configuracion')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-target="configuracion">
+                <i class="fa-solid fa-gear w-5"></i> <span>Configuración</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- Área de Contenido Principal -->
+    <main id="mainContainer" class="flex-1 h-full overflow-y-auto bg-slate-50 relative scroll-smooth">
+        <div class="p-4 md:p-8 max-w-7xl mx-auto pb-24">
+            
+            <!-- Banner de Alerta Sin Datos -->
+            <div id="noVotesBanner" class="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl flex items-center justify-between mb-6 shadow-sm hidden">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-circle-info text-amber-600 text-lg"></i>
+                    <span class="text-sm">No hay actas computadas. Comienza registrando datos en <strong>Planilla Escuela</strong> o <strong>Carga Individual</strong>.</span>
+                </div>
+            </div>
+
+            <!-- TABS CONTENT -->
+
+            <!-- Tab: Dashboard -->
+            <section id="dashboard" class="tab-content active space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800" id="dashElectionTitle">Resultados Generales</h2>
+                        <p class="text-slate-500 text-sm">Actualizado en tiempo real</p>
+                    </div>
+                </div>
+
+                <!-- KPIs Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
+                        <div class="text-slate-400 text-xs font-semibold uppercase mb-1">Mesas Escrutadas</div>
+                        <div class="text-3xl font-black text-slate-800" id="kpiMesas">0 / 0</div>
+                        <div class="text-sm text-blue-600 font-medium mt-1" id="kpiMesasPct">0.00%</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
+                        <div class="text-slate-400 text-xs font-semibold uppercase mb-1">Participación</div>
+                        <div class="text-3xl font-black text-slate-800" id="kpiParticipacion">0.00%</div>
+                        <div class="text-sm text-slate-500 font-medium mt-1" id="kpiVotantes">0 votantes</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
+                        <div class="text-slate-400 text-xs font-semibold uppercase mb-1">Votos en Blanco</div>
+                        <div class="text-3xl font-black text-slate-800" id="kpiBlancos">0</div>
+                        <div class="text-sm text-slate-500 font-medium mt-1" id="kpiBlancosPct">0.00%</div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
+                        <div class="text-slate-400 text-xs font-semibold uppercase mb-1">Votos Nulos</div>
+                        <div class="text-3xl font-black text-slate-800" id="kpiNulos">0</div>
+                        <div class="text-sm text-slate-500 font-medium mt-1" id="kpiNulosPct">0.00%</div>
+                    </div>
+                </div>
+
+                <!-- Main Results Area -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Progress Bars grouped by Cargo -->
+                    <div class="lg:col-span-2 space-y-6" id="dashboardCargosContainer">
+                        <!-- Generado dinámicamente -->
+                    </div>
+
+                    <!-- Chart -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-max">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Distribución Global (Intendentes)</h3>
+                        <div class="relative w-full aspect-square flex items-center justify-center">
+                            <canvas id="resultsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Planilla Escuela -->
+            <section id="planilla" class="tab-content space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Carga Rápida por Escuela (Planilla)</h2>
+                    <p class="text-slate-500 text-sm">Selecciona una escuela para cargar todas sus mesas.</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="mb-6 flex flex-col md:flex-row gap-4 items-end">
+                        <div class="flex-1">
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Seleccionar Escuela</label>
+                            <select id="planillaSchoolSelect" onchange="renderPlanillaGrid()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-slate-700">
+                                <!-- Opciones generadas por JS -->
+                            </select>
+                        </div>
+                        <button onclick="renderPlanillaGrid()" class="bg-slate-800 text-white px-5 py-3 rounded-xl font-medium hover:bg-slate-700 transition-colors whitespace-nowrap shadow-sm">
+                            <i class="fa-solid fa-rotate-right mr-2"></i> Refrescar
+                        </button>
+                    </div>
+
+                    <div id="planillaGridContainer" class="overflow-x-auto w-full rounded-xl border border-slate-200">
+                        <!-- La grilla se genera acá -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Carga de Acta Individual -->
+            <section id="carga" class="tab-content max-w-4xl mx-auto space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Cargar Acta Individual</h2>
+                    <p class="text-slate-500 text-sm">Ingresa los datos de un telegrama o certificado de escrutinio.</p>
+                </div>
+
+                <form id="actaForm" onsubmit="handleActaSubmit(event)" class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100 space-y-8">
+                    <!-- Origen del Acta -->
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b">1. Origen y Sobres</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Escuela / Local</label>
+                                <select id="actaEscuela" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <!-- Opciones generadas -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Nº Mesa</label>
+                                <input type="text" id="actaMesa" required placeholder="Ej: 0001" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none uppercase font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Sobres en Urna</label>
+                                <input type="number" id="actaSobres" required min="1" placeholder="0" class="w-full p-3 bg-blue-50 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-xl font-bold text-blue-800 text-center" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Votos Agrupados por Cargo -->
+                    <div id="actaCargosContainer" class="space-y-6">
+                        <!-- Generado Dinamicamente -->
+                    </div>
+
+                    <!-- Votos Especiales -->
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b">3. Votos Especiales (Globales)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-slate-700">Votos en Blanco</h4>
+                                    <p class="text-xs text-slate-500">Sobre vacío</p>
+                                </div>
+                                <input type="number" id="actaBlancos" value="0" min="0" class="w-24 p-3 bg-white border border-slate-300 rounded-xl text-xl font-bold text-center" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-slate-700">Votos Nulos</h4>
+                                    <p class="text-xs text-slate-500">Rotos / Múltiples</p>
+                                </div>
+                                <input type="number" id="actaNulos" value="0" min="0" class="w-24 p-3 bg-white border border-slate-300 rounded-xl text-xl font-bold text-center" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="pt-6 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-sm text-slate-500 flex items-center gap-2 font-medium">
+                            <i class="fa-solid fa-shield-halved text-blue-500 text-lg"></i> Verificación matemática automática
+                        </div>
+                        <button type="submit" class="w-full sm:w-auto px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5">
+                            Guardar Acta de Mesa
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Tab: Auditoría -->
+            <section id="auditoria" class="tab-content space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">Mesas Registradas</h2>
+                        <p class="text-slate-500 text-sm">Historial de actas cargadas. Revisa o anula registros.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="searchMesa" placeholder="Buscar Nº Mesa..." onkeyup="renderActsTable()" class="pl-10 pr-4 py-2 border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full md:w-64">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm uppercase tracking-wider">
+                                    <th class="p-4 font-semibold">Fecha/Hora</th>
+                                    <th class="p-4 font-semibold">Escuela</th>
+                                    <th class="p-4 font-semibold">Mesa</th>
+                                    <th class="p-4 font-semibold text-center">Sobres</th>
+                                    <th class="p-4 font-semibold text-center">Blancos</th>
+                                    <th class="p-4 font-semibold text-center">Nulos</th>
+                                    <th class="p-4 font-semibold text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="actsTableBody" class="divide-y divide-slate-100">
+                                <!-- Generado Dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="emptyActsState" class="p-12 text-center hidden">
+                        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fa-solid fa-folder-open text-2xl text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-700">Sin registros</h3>
+                        <p class="text-slate-500 text-sm mt-1">Aún no se ha cargado ninguna mesa.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Configuración -->
+            <section id="configuracion" class="tab-content max-w-5xl mx-auto space-y-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Configuración del Sistema</h2>
+                    <p class="text-slate-500 text-sm">Ajusta los parámetros y listas antes de iniciar el escrutinio.</p>
+                </div>
+                
+                <!-- Seguridad -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-800 border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-shield-halved text-blue-500"></i> Seguridad</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Nueva Contraseña de Acceso</label>
+                            <input type="password" id="confNewPassword" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <div class="flex justify-start pt-2">
+                        <button onclick="saveAdminPassword()" class="bg-slate-800 text-white px-5 py-2 rounded-lg text-sm hover:bg-slate-700 font-medium">Actualizar Contraseña</button>
+                    </div>
+                </div>
+
+                <!-- Configuración Global -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <h3 class="text-lg font-bold text-slate-800 border-b pb-2 flex items-center gap-2"><i class="fa-solid fa-sliders text-blue-500"></i> Parámetros Globales</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Título de Elección</label>
+                            <input type="text" id="confTitle" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Total Padrón (Electores)</label>
+                            <input type="number" id="confPadron" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Total Mesas a Escrutar</label>
+                            <input type="number" id="confMesas" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="flex justify-end pt-2">
+                        <button onclick="saveGlobalConfig()" class="bg-slate-800 text-white px-5 py-2 rounded-lg text-sm hover:bg-slate-700 font-medium">Guardar Parámetros</button>
+                    </div>
+                </div>
+
+                <!-- Gestión de Escuelas -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-school text-blue-500"></i> Escuelas / Establecimientos</h3>
+                        <button onclick="showAddSchoolModal()" class="text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-200 transition-colors"><i class="fa-solid fa-plus mr-1"></i> Agregar Escuela</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left border border-slate-100 rounded-lg overflow-hidden">
+                            <thead class="bg-slate-50 text-slate-600 font-semibold border-b"><tr><th class="px-4 py-3">Nombre del Establecimiento</th><th class="px-4 py-3 text-center">Mesa Inicial</th><th class="px-4 py-3 text-center">Mesa Final</th><th class="px-4 py-3 text-right">Acción</th></tr></thead>
+                            <tbody id="confSchoolsList" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gestión de Partidos -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-users text-blue-500"></i> Partidos Políticos</h3>
+                        <button onclick="showAddPartyModal()" class="text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-200 transition-colors"><i class="fa-solid fa-plus mr-1"></i> Agregar Partido</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" id="confPartiesList">
+                        <!-- Partidos Listados aquí -->
+                    </div>
+                </div>
+
+                <!-- Gestión de Candidatos -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-tie text-blue-500"></i> Listas / Candidatos</h3>
+                        <button onclick="showAddCandidateModal()" class="text-sm bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-200 transition-colors"><i class="fa-solid fa-plus mr-1"></i> Agregar Candidato</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left border border-slate-100 rounded-lg overflow-hidden">
+                            <thead class="bg-slate-50 text-slate-600 font-semibold border-b"><tr><th class="px-4 py-3">Nombre</th><th class="px-4 py-3">Cargo Postulado</th><th class="px-4 py-3">Partido Político</th><th class="px-4 py-3 text-right">Acción</th></tr></thead>
+                            <tbody id="confCandidatesList" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Peligro: Zona de Borrado -->
+                <div class="bg-red-50 border border-red-200 p-6 rounded-2xl space-y-4">
+                    <h3 class="text-lg font-bold text-red-800 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> Zona de Peligro</h3>
+                    <p class="text-sm text-red-700 font-medium">Al hacer clic en este botón, se eliminarán permanentemente todas las actas computadas, la lista de escuelas, los partidos y candidatos. El sistema se restablecerá completamente a cero para una nueva elección.</p>
+                    <div>
+                        <button onclick="promptResetAllData()" class="bg-red-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-red-700 shadow-sm transition-colors">Borrar todos los datos y reiniciar sistema</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Scroll to Top Button -->
+    <button id="scrollTopBtn" onclick="scrollToTop()" class="fixed bottom-6 right-6 bg-slate-800 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-2xl hidden transition-opacity duration-300 opacity-0 z-40 hover:bg-slate-700 hover:scale-110 transform" title="Volver arriba">
+        <i class="fa-solid fa-arrow-up text-xl"></i>
+    </button>
+
+    <!-- Exit Fullscreen Button (Visible solo en Fullscreen) -->
+    <button id="exitFullscreenBtn" onclick="exitFullscreenApp()" class="fixed top-4 right-4 md:top-6 md:right-8 bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl shadow-[0_0_15px_rgba(220,38,38,0.5)] z-[60] hidden items-center gap-2 transition-all transform hover:-translate-y-0.5 border border-red-500 font-bold" title="Salir de Pantalla Completa">
+        <i class="fa-solid fa-compress"></i> <span>Salir</span>
+    </button>
+
+    <!-- UI Elements: Toasts & Modals -->
+    <div id="toast-container"></div>
+
+    <!-- Password Modal for Config -->
+    <div id="modalPassword" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4 transform scale-95 transition-transform duration-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                    <i class="fa-solid fa-lock text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800">Acceso Restringido</h3>
+                <p class="text-sm text-slate-500 mt-1">Ingresa la clave para acceder a Configuración.</p>
+            </div>
+            <input type="password" id="inputConfigPwd" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg mb-6" placeholder="Contraseña..." onkeyup="if(event.key === 'Enter') checkConfigPassword()">
+            <div class="flex justify-between gap-3">
+                <button onclick="closePasswordModal()" class="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors">Cancelar</button>
+                <button onclick="checkConfigPassword()" class="w-1/2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors">Ingresar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reusable Confirmation Dialog Modal -->
+    <div id="dialogModal" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 transform scale-95 transition-transform duration-200" id="dialogContent">
+            <h3 class="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2" id="dialogTitle"><i class="fa-solid fa-circle-exclamation text-amber-500"></i> Confirmar</h3>
+            <p class="text-slate-600 mb-6 font-medium" id="dialogMsg">¿Estás seguro?</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeDialog()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors">Cancelar</button>
+                <button id="dialogConfirmBtn" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors shadow-md">Confirmar Acción</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add School Modal -->
+    <div id="modalAddSchool" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 border-b pb-2">Agregar Escuela</h3>
+            <div class="space-y-4">
+                <div><label class="block text-sm font-semibold mb-1 text-slate-700">Nombre del Establecimiento</label><input type="text" id="inpSchName" class="w-full p-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-semibold mb-1 text-slate-700">Desde Mesa Nº</label><input type="number" id="inpSchMesaStart" min="1" class="w-full p-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                    <div><label class="block text-sm font-semibold mb-1 text-slate-700">Hasta Mesa Nº</label><input type="number" id="inpSchMesaEnd" min="1" class="w-full p-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button onclick="document.getElementById('modalAddSchool').classList.add('hidden')" class="px-5 py-2 bg-slate-100 rounded-xl text-slate-700 font-bold hover:bg-slate-200">Cancelar</button>
+                <button onclick="saveNewSchool()" class="px-5 py-2 bg-blue-600 rounded-xl text-white font-bold hover:bg-blue-700 shadow-md">Guardar Escuela</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Party Modal -->
+    <div id="modalAddParty" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 border-b pb-2">Agregar Partido</h3>
+            <div class="space-y-4">
+                <div><label class="block text-sm font-semibold mb-1 text-slate-700">Nombre de Lista / Partido</label><input type="text" id="inpPartyName" class="w-full p-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div><label class="block text-sm font-semibold mb-1 text-slate-700">Color Representativo</label><input type="color" id="inpPartyColor" class="w-full h-12 border rounded-lg p-1 cursor-pointer bg-slate-50"></div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button onclick="document.getElementById('modalAddParty').classList.add('hidden')" class="px-5 py-2 bg-slate-100 rounded-xl text-slate-700 font-bold hover:bg-slate-200">Cancelar</button>
+                <button onclick="saveNewParty()" class="px-5 py-2 bg-blue-600 rounded-xl text-white font-bold hover:bg-blue-700 shadow-md">Guardar Partido</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Candidate Modal -->
+    <div id="modalAddCandidate" class="fixed inset-0 modal-overlay z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+            <h3 class="text-xl font-bold text-slate-800 mb-4 border-b pb-2">Agregar Candidato</h3>
+            <div class="space-y-4">
+                <div><label class="block text-sm font-semibold mb-1 text-slate-700">Nombre del Candidato o Lista</label><input type="text" id="inpCandName" class="w-full p-2.5 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></div>
+                <div><label class="block text-sm font-semibold mb-1 text-slate-700">Cargo</label>
+                    <select id="inpCandCargo" class="w-full p-2.5 bg-slate-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="Intendente">Intendente</option>
+                        <option value="Concejal">Concejal</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div><label class="block text-sm font-semibold mb-1 text-slate-700">Partido Político / Alianza</label>
+                    <select id="inpCandParty" class="w-full p-2.5 bg-slate-50 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"></select>
+                </div>
+            </div>
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button onclick="document.getElementById('modalAddCandidate').classList.add('hidden')" class="px-5 py-2 bg-slate-100 rounded-xl text-slate-700 font-bold hover:bg-slate-200">Cancelar</button>
+                <button onclick="saveNewCandidate()" class="px-5 py-2 bg-blue-600 rounded-xl text-white font-bold hover:bg-blue-700 shadow-md">Guardar Candidato</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lógica de la Aplicación -->
+    <script>
+        // --- 1. ESTADO DE LA APLICACIÓN (MEMORIA LOCAL) ---
+        let electionState = {
+            config: { title: "Elecciones Generales", totalPadron: 0, mesasHabilitadas: 0, adminPassword: "admin" },
+            parties: [],
+            candidates: [],
+            schools: [],
+            actas: []
+        };
+
+        let chartInstance = null;
+
+        // Inicialización al cargar la página
+        window.onload = () => {
+            loadState();
+            setupApp();
+            switchTab('dashboard', true); // Bypass auth for initial load of dashboard
+        };
+
+        // Función para ocultar la pantalla de inicio y entrar a pantalla completa
+        function enterSystem() {
+            // Solicitar Pantalla Completa al navegador
+            const docElm = document.documentElement;
+            if (docElm.requestFullscreen) {
+                docElm.requestFullscreen().catch(err => console.warn(err));
+            } else if (docElm.webkitRequestFullscreen) { /* Safari */
+                docElm.webkitRequestFullscreen().catch(err => console.warn(err));
+            } else if (docElm.msRequestFullscreen) { /* IE11 */
+                docElm.msRequestFullscreen().catch(err => console.warn(err));
+            }
+
+            const landing = document.getElementById('landingScreen');
+            landing.classList.add('opacity-0');
+            setTimeout(() => {
+                landing.classList.add('hidden');
+            }, 500); // 500ms para que coincida con la duración de la transición
+        }
+
+        // Función para salir de pantalla completa desde el botón
+        function exitFullscreenApp() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+
+        // Escuchar cambios de estado en la Pantalla Completa para mostrar/ocultar el botón
+        document.addEventListener('fullscreenchange', toggleFullscreenButton);
+        document.addEventListener('webkitfullscreenchange', toggleFullscreenButton);
+        document.addEventListener('msfullscreenchange', toggleFullscreenButton);
+
+        function toggleFullscreenButton() {
+            const btn = document.getElementById('exitFullscreenBtn');
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+            
+            if (isFullscreen) {
+                btn.classList.remove('hidden');
+                btn.classList.add('flex');
+            } else {
+                btn.classList.add('hidden');
+                btn.classList.remove('flex');
+            }
+        }
+
+        function setupApp() {
+            document.getElementById('confTitle').value = electionState.config.title;
+            document.getElementById('dashElectionTitle').innerText = electionState.config.title;
+            
+            checkEmptyState();
+            
+            // Renderizar listados en diferentes áreas
+            populateSchoolSelects();
+            renderCandidateInputsInForm();
+            renderActsTable();
+            updateDashboard();
+            
+            // Render config tab
+            loadSavedConfigToInputs();
+            renderConfigLists();
+            
+            // Setup Scroll to Top listener
+            setupScrollToTop();
+        }
+
+        function setupScrollToTop() {
+            const mainEl = document.getElementById('mainContainer');
+            const scrollBtn = document.getElementById('scrollTopBtn');
+            mainEl.addEventListener('scroll', () => {
+                if (mainEl.scrollTop > 250) {
+                    scrollBtn.classList.remove('hidden');
+                    setTimeout(() => scrollBtn.classList.remove('opacity-0'), 10);
+                } else {
+                    scrollBtn.classList.add('opacity-0');
+                    setTimeout(() => scrollBtn.classList.add('hidden'), 300);
+                }
+            });
+        }
+
+        function scrollToTop() {
+            document.getElementById('mainContainer').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- ALMACENAMIENTO (LOCALSTORAGE) ---
+        function saveState() {
+            localStorage.setItem('electionSystemState', JSON.stringify(electionState));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('electionSystemState');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    electionState = { ...electionState, ...parsed };
+                    // Ensure password exists in case loading old format
+                    if(!electionState.config.adminPassword) electionState.config.adminPassword = 'admin';
+                } catch(e) { console.error('Error loading state'); }
+            }
+        }
+
+        function checkEmptyState() {
+            const banner = document.getElementById('noVotesBanner');
+            if (electionState.actas.length === 0) {
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        // --- NAVEGACIÓN (TABS) & SEGURIDAD ---
+        function switchTab(tabId, bypassAuth = false) {
+            
+            if (tabId === 'configuracion' && !bypassAuth) {
+                showPasswordModal();
+                return; // Stop execution until authenticated
+            }
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                btn.classList.add('text-slate-300', 'hover:bg-slate-800', 'hover:text-white');
+                if(btn.dataset.target === tabId) {
+                    btn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                    btn.classList.remove('text-slate-300', 'hover:bg-slate-800', 'hover:text-white');
+                }
+            });
+
+            if(tabId === 'planilla') populateSchoolSelects();
+        }
+
+        // Modal Contraseña
+        function showPasswordModal() {
+            document.getElementById('inputConfigPwd').value = '';
+            const modal = document.getElementById('modalPassword');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+                document.getElementById('inputConfigPwd').focus();
+            }, 10);
+        }
+
+        function checkConfigPassword() {
+            const input = document.getElementById('inputConfigPwd').value;
+            if (input === electionState.config.adminPassword) {
+                closePasswordModal();
+                switchTab('configuracion', true);
+            } else {
+                showToast('Contraseña incorrecta. Intente de nuevo.', 'error');
+            }
+        }
+
+        function closePasswordModal() {
+            const modal = document.getElementById('modalPassword');
+            modal.classList.add('opacity-0');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+        
+        function saveAdminPassword() {
+            const newPwd = document.getElementById('confNewPassword').value.trim();
+            if (newPwd.length < 4) {
+                showToast('La contraseña debe tener al menos 4 caracteres.', 'error');
+                return;
+            }
+            electionState.config.adminPassword = newPwd;
+            saveState();
+            document.getElementById('confNewPassword').value = '';
+            showToast('Contraseña actualizada correctamente.', 'success');
+        }
+
+        // --- COMPONENTES UI (TOAST & DIALOG) ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            let icon = 'fa-info-circle';
+            if(type === 'success') icon = 'fa-check-circle';
+            if(type === 'error') icon = 'fa-triangle-exclamation';
+
+            toast.innerHTML = `<div class="flex items-center gap-3"><i class="fa-solid ${icon} text-lg"></i><span>${message}</span></div>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        let currentDialogCallback = null;
+        function showDialog(title, message, callback) {
+            document.getElementById('dialogTitle').innerHTML = title;
+            document.getElementById('dialogMsg').innerText = message;
+            currentDialogCallback = callback;
+            
+            const modal = document.getElementById('dialogModal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('#dialogContent').classList.remove('scale-95');
+            }, 10);
+        }
+        function closeDialog() {
+            const modal = document.getElementById('dialogModal');
+            modal.classList.add('opacity-0');
+            modal.querySelector('#dialogContent').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+            currentDialogCallback = null;
+        }
+        document.getElementById('dialogConfirmBtn').addEventListener('click', () => {
+            if(currentDialogCallback) currentDialogCallback();
+            closeDialog();
+        });
+
+
+        // --- LÓGICA CORE: DASHBOARD Y CÁLCULOS ---
+        function updateDashboard() {
+            const config = electionState.config;
+            const actas = electionState.actas;
+            
+            // Stats Base
+            const mesasEscrutadas = actas.length;
+            const mesasPct = config.mesasHabilitadas > 0 ? ((mesasEscrutadas / config.mesasHabilitadas) * 100).toFixed(2) : 0;
+            
+            let totalSobres = 0;
+            let totalBlancos = 0;
+            let totalNulos = 0;
+            
+            // Agrupar votos por candidato
+            let votosPorCandidato = {};
+            electionState.candidates.forEach(c => votosPorCandidato[c.id] = 0);
+
+            actas.forEach(a => {
+                totalSobres += a.sobres;
+                totalBlancos += a.blancos;
+                totalNulos += a.nulos;
+                for(const [cId, v] of Object.entries(a.votos)) {
+                    if(votosPorCandidato[cId] !== undefined) votosPorCandidato[cId] += v;
+                }
+            });
+
+            const participacionPct = config.totalPadron > 0 ? ((totalSobres / config.totalPadron) * 100).toFixed(2) : 0;
+            const blancosPct = totalSobres > 0 ? ((totalBlancos / totalSobres) * 100).toFixed(2) : 0;
+            const nulosPct = totalSobres > 0 ? ((totalNulos / totalSobres) * 100).toFixed(2) : 0;
+
+            // Actualizar KPIs
+            document.getElementById('kpiMesas').innerText = `${mesasEscrutadas} / ${config.mesasHabilitadas}`;
+            document.getElementById('kpiMesasPct').innerText = `${mesasPct}% del total`;
+            document.getElementById('kpiParticipacion').innerText = `${participacionPct}%`;
+            document.getElementById('kpiVotantes').innerText = `${totalSobres.toLocaleString()} votantes`;
+            document.getElementById('kpiBlancos').innerText = totalBlancos.toLocaleString();
+            document.getElementById('kpiBlancosPct').innerText = `${blancosPct}%`;
+            document.getElementById('kpiNulos').innerText = totalNulos.toLocaleString();
+            document.getElementById('kpiNulosPct').innerText = `${nulosPct}%`;
+
+            // Agrupar por Cargo y Renderizar Barras
+            const container = document.getElementById('dashboardCargosContainer');
+            container.innerHTML = '';
+
+            const cargos = [...new Set(electionState.candidates.map(c => c.cargo))];
+            let chartLabels = [];
+            let chartData = [];
+            let chartColors = [];
+
+            cargos.forEach(cargo => {
+                const cands = electionState.candidates.filter(c => c.cargo === cargo);
+                if(cands.length === 0) return;
+
+                // Calcular total válido para ESTE cargo específicamente
+                let totalValidoCargo = cands.reduce((sum, c) => sum + votosPorCandidato[c.id], 0);
+
+                // Ordenar de mayor a menor
+                let sortedCands = cands.map(c => {
+                    const party = electionState.parties.find(p => p.id === c.partyId) || { name: 'Independiente', color: '#94a3b8' };
+                    const v = votosPorCandidato[c.id];
+                    const pct = totalValidoCargo > 0 ? ((v / totalValidoCargo) * 100).toFixed(2) : 0;
+                    return { ...c, party, votos: v, pct };
+                }).sort((a, b) => b.votos - a.votos);
+
+                // Si es Intendente, guardar para el chart
+                if(cargo === 'Intendente') {
+                    sortedCands.forEach(c => {
+                        chartLabels.push(c.name);
+                        chartData.push(c.votos);
+                        chartColors.push(c.party.color);
+                    });
+                }
+
+                // Generar HTML del bloque
+                let blockHtml = `
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b uppercase tracking-wide text-sm flex items-center justify-between">
+                            <span><i class="fa-solid fa-ranking-star text-blue-500 mr-2"></i>Resultados: ${cargo}</span>
+                            <span class="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded-md">Válidos: ${totalValidoCargo.toLocaleString()}</span>
+                        </h3>
+                        <div class="space-y-4">
+                `;
+
+                sortedCands.forEach(cand => {
+                    blockHtml += `
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <div class="font-bold flex items-center gap-2">
+                                    <div class="w-3 h-3 rounded-full shadow-sm" style="background-color: ${cand.party.color}"></div>
+                                    ${cand.name} <span class="text-slate-500 font-normal">(${cand.party.name})</span>
+                                </div>
+                                <div class="font-bold">${cand.votos.toLocaleString()} <span class="text-slate-400 font-normal text-xs ml-1">(${cand.pct}%)</span></div>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200/50">
+                                <div class="h-2.5 rounded-full transition-all duration-1000" style="width: ${cand.pct}%; background-color: ${cand.party.color}"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                blockHtml += `</div></div>`;
+                container.innerHTML += blockHtml;
+            });
+
+            // Actualizar Chart
+            updateChart(chartLabels, chartData, chartColors);
+            checkEmptyState();
+        }
+
+        function updateChart(labels, data, colors) {
+            const ctx = document.getElementById('resultsChart');
+            
+            const sum = data.reduce((a,b)=>a+b, 0);
+            if(sum === 0) {
+                data = [1];
+                colors = ['#f1f5f9'];
+                labels = ['Sin datos'];
+            }
+
+            if(chartInstance) {
+                chartInstance.data.labels = labels;
+                chartInstance.data.datasets[0].data = data;
+                chartInstance.data.datasets[0].backgroundColor = colors;
+                chartInstance.update();
+            } else {
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{ data: data, backgroundColor: colors, borderWidth: 1, borderColor: '#ffffff', hoverOffset: 4 }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '65%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if(sum === 0) return 'Sin datos';
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const pct = ((value/sum)*100).toFixed(1) + '%';
+                                        return ` ${label}: ${value} (${pct})`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // --- FORMULARIO DE CARGA INDIVIDUAL ---
+        function populateSchoolSelects() {
+            const schools = electionState.schools;
+            let options = schools.map(s => `<option value="${s.id}">${s.name} (Mesas ${s.mesaStart} a ${s.mesaEnd})</option>`).join('');
+            if(options === '') options = '<option value="">No hay escuelas configuradas</option>';
+            
+            const selIndiv = document.getElementById('actaEscuela');
+            const selPlanilla = document.getElementById('planillaSchoolSelect');
+            
+            if(selIndiv) selIndiv.innerHTML = options;
+            if(selPlanilla) {
+                selPlanilla.innerHTML = options;
+                renderPlanillaGrid();
+            }
+        }
+
+        function renderCandidateInputsInForm() {
+            const container = document.getElementById('actaCargosContainer');
+            if(!container) return;
+            container.innerHTML = '';
+            
+            const cargos = [...new Set(electionState.candidates.map(c => c.cargo))];
+            
+            cargos.forEach(cargo => {
+                const cands = electionState.candidates.filter(c => c.cargo === cargo);
+                
+                let html = `
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 pb-2 border-b">2. Votos Categoría: ${cargo}</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                `;
+                
+                cands.forEach(c => {
+                    const party = electionState.parties.find(p => p.id === c.partyId) || { name: '', color: '#ccc' };
+                    html += `
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between border-l-4" style="border-left-color: ${party.color}">
+                            <div>
+                                <h4 class="font-bold text-slate-800">${c.name}</h4>
+                                <p class="text-xs text-slate-500 font-medium">${party.name}</p>
+                            </div>
+                            <input type="number" id="inp_voto_${c.id}" value="0" min="0" required onkeypress="return event.charCode >= 48 && event.charCode <= 57" class="cand-vote-input w-24 p-3 bg-white border border-slate-300 rounded-xl text-xl font-bold text-center outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all" data-cand-id="${c.id}" data-cargo="${cargo}">
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        function handleActaSubmit(e) {
+            e.preventDefault();
+            
+            const escuelaId = document.getElementById('actaEscuela').value;
+            const mesa = document.getElementById('actaMesa').value.trim();
+            const sobres = parseInt(document.getElementById('actaSobres').value) || 0;
+            const blancos = parseInt(document.getElementById('actaBlancos').value) || 0;
+            const nulos = parseInt(document.getElementById('actaNulos').value) || 0;
+            
+            if(!escuelaId) {
+                showToast('Selecciona una escuela válida.', 'error'); return;
+            }
+
+            // Validar existencia previa
+            const existe = electionState.actas.find(a => a.escuelaId === escuelaId && a.mesa.toLowerCase() === mesa.toLowerCase());
+            if(existe) {
+                showToast(`La mesa ${mesa} ya se encuentra cargada. Bórrela en Auditoría si desea reemplazarla.`, 'error');
+                return;
+            }
+
+            // Recopilar votos y sumar por cargos
+            let votos = {};
+            let sumasPorCargo = {};
+            
+            const inputs = document.querySelectorAll('.cand-vote-input');
+            inputs.forEach(inp => {
+                const cId = inp.getAttribute('data-cand-id');
+                const cargo = inp.getAttribute('data-cargo');
+                const val = parseInt(inp.value) || 0;
+                
+                votos[cId] = val;
+                sumasPorCargo[cargo] = (sumasPorCargo[cargo] || 0) + val;
+            });
+
+            // Encontrar el cargo con mayor cantidad de votos sumados
+            let maxSumaVotos = 0;
+            for(let cargo in sumasPorCargo) {
+                if(sumasPorCargo[cargo] > maxSumaVotos) maxSumaVotos = sumasPorCargo[cargo];
+            }
+
+            const totalCalculado = maxSumaVotos + blancos + nulos;
+
+            if(totalCalculado > sobres) {
+                showDialog(
+                    '<i class="fa-solid fa-triangle-exclamation text-red-500"></i> Inconsistencia Matemática',
+                    `La suma de la categoría con más votos (${maxSumaVotos}) + blancos + nulos DA UN TOTAL DE ${totalCalculado}, PERO SOLO HAY ${sobres} SOBRES.\n\nRevise los datos ingresados.`,
+                    null
+                );
+                return;
+            }
+
+            // Guardar
+            const newActa = {
+                id: 'acta_' + Date.now(),
+                escuelaId,
+                mesa,
+                sobres,
+                blancos,
+                nulos,
+                votos,
+                timestamp: new Date().toISOString()
+            };
+
+            electionState.actas.push(newActa);
+            saveState();
+            
+            document.getElementById('actaForm').reset();
+            
+            updateDashboard();
+            renderActsTable();
+            if(document.getElementById('planilla').classList.contains('active')) renderPlanillaGrid();
+            
+            showToast(`Acta de Mesa ${mesa} guardada correctamente.`, 'success');
+        }
+
+
+        // --- PLANILLA ESCUELA ---
+        function renderPlanillaGrid() {
+            const schoolId = document.getElementById('planillaSchoolSelect').value;
+            const container = document.getElementById('planillaGridContainer');
+            
+            if(!schoolId) {
+                container.innerHTML = '<div class="p-8 text-center text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-300">Agregue escuelas en Configuración para usar la planilla.</div>';
+                return;
+            }
+
+            const school = electionState.schools.find(s => s.id === schoolId);
+            if(!school) return;
+
+            const intendentes = electionState.candidates.filter(c => c.cargo === 'Intendente');
+            const concejales = electionState.candidates.filter(c => c.cargo === 'Concejal');
+            const otros = electionState.candidates.filter(c => c.cargo !== 'Intendente' && c.cargo !== 'Concejal');
+
+            // Armar cabeceras
+            let html = `<table class="w-full text-sm text-left min-w-max border-collapse">
+                <thead class="text-xs uppercase bg-slate-800 text-white">
+                    <tr>
+                        <th rowspan="2" class="px-3 py-3 border border-slate-700 bg-slate-900 sticky left-0 z-10 w-20 text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]">Mesa</th>
+                        <th rowspan="2" class="px-3 py-3 border border-slate-700 text-center w-24">Sobres</th>
+                        ${intendentes.length > 0 ? `<th colspan="${intendentes.length}" class="px-3 py-2 border border-slate-700 text-center bg-blue-900/50 text-blue-200">Intendentes</th>` : ''}
+                        ${concejales.length > 0 ? `<th colspan="${concejales.length}" class="px-3 py-2 border border-slate-700 text-center bg-emerald-900/50 text-emerald-200">Concejales</th>` : ''}
+                        ${otros.length > 0 ? `<th colspan="${otros.length}" class="px-3 py-2 border border-slate-700 text-center bg-purple-900/50 text-purple-200">Otros</th>` : ''}
+                        <th rowspan="2" class="px-3 py-3 border border-slate-700 text-center bg-slate-700 w-24">Blancos</th>
+                        <th rowspan="2" class="px-3 py-3 border border-slate-700 text-center bg-slate-700 w-24">Nulos</th>
+                        <th rowspan="2" class="px-3 py-3 border border-slate-700 text-center w-28">Acción</th>
+                    </tr>
+                    <tr>
+                        ${intendentes.map(c => `<th class="px-2 py-2 border border-slate-700 text-center text-[10px] bg-blue-800/50 tracking-wider" title="${c.name}">${c.name.split(' ')[0]}</th>`).join('')}
+                        ${concejales.map(c => `<th class="px-2 py-2 border border-slate-700 text-center text-[10px] bg-emerald-800/50 tracking-wider" title="${c.name}">${c.name.split(' ')[0]}</th>`).join('')}
+                        ${otros.map(c => `<th class="px-2 py-2 border border-slate-700 text-center text-[10px] bg-purple-800/50 tracking-wider" title="${c.name}">${c.name.split(' ')[0]}</th>`).join('')}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 bg-white">
+            `;
+
+            for (let m = school.mesaStart; m <= school.mesaEnd; m++) {
+                const mesaFormat = m.toString().padStart(4, '0');
+                const loadedActa = electionState.actas.find(a => a.escuelaId === schoolId && a.mesa === mesaFormat);
+                const isLoaded = !!loadedActa;
+                const bgRow = isLoaded ? 'bg-emerald-50/30' : 'hover:bg-slate-50';
+
+                html += `<tr class="${bgRow} transition-colors">
+                    <td class="px-3 py-2 border font-bold text-slate-700 sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] text-center text-base">${mesaFormat}</td>
+                    
+                    <td class="px-2 py-2 border">
+                        <input type="number" id="pl_sobres_${m}" value="${isLoaded ? loadedActa.sobres : ''}" ${isLoaded ? 'disabled' : ''} onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full text-center p-2 border rounded-md font-bold text-blue-700 bg-blue-50/50 focus:ring-2 focus:ring-blue-500 outline-none ${isLoaded ? 'opacity-70 bg-transparent border-transparent' : ''}">
+                    </td>`;
+
+                // Intendentes
+                intendentes.forEach(c => {
+                    html += `<td class="px-2 py-2 border"><input type="number" id="pl_voto_${m}_${c.id}" value="${isLoaded ? (loadedActa.votos[c.id]||0) : ''}" ${isLoaded ? 'disabled' : ''} onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full text-center p-1.5 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none ${isLoaded ? 'opacity-70 bg-transparent border-transparent text-slate-800 font-semibold' : ''}"></td>`;
+                });
+                // Concejales
+                concejales.forEach(c => {
+                    html += `<td class="px-2 py-2 border"><input type="number" id="pl_voto_${m}_${c.id}" value="${isLoaded ? (loadedActa.votos[c.id]||0) : ''}" ${isLoaded ? 'disabled' : ''} onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full text-center p-1.5 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none ${isLoaded ? 'opacity-70 bg-transparent border-transparent text-slate-800 font-semibold' : ''}"></td>`;
+                });
+                // Otros
+                otros.forEach(c => {
+                    html += `<td class="px-2 py-2 border"><input type="number" id="pl_voto_${m}_${c.id}" value="${isLoaded ? (loadedActa.votos[c.id]||0) : ''}" ${isLoaded ? 'disabled' : ''} onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full text-center p-1.5 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none ${isLoaded ? 'opacity-70 bg-transparent border-transparent text-slate-800 font-semibold' : ''}"></td>`;
+                });
+
+                // Blancos y Nulos
+                html += `
+                    <td class="px-2 py-2 border bg-slate-50/50">
+                        <input type="number" id="pl_blancos_${m}" value="${isLoaded ? loadedActa.blancos : ''}" ${isLoaded ? 'disabled' : ''} onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full text-center p-1.5 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none ${isLoaded ? 'opacity-70 bg-transparent border-transparent text-slate-600 font-semibold' : ''}">
+                    </td>
+                    <td class="px-2 py-2 border bg-slate-50/50">
+                        <input type="number" id="pl_nulos_${m}" value="${isLoaded ? loadedActa.nulos : ''}" ${isLoaded ? 'disabled' : ''} onkeypress="return event.charCode >= 48 && event.charCode <= 57" oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="w-full text-center p-1.5 border rounded-md focus:ring-2 focus:ring-blue-500 outline-none ${isLoaded ? 'opacity-70 bg-transparent border-transparent text-slate-600 font-semibold' : ''}">
+                    </td>
+                    <td class="px-3 py-2 border text-center">
+                        ${isLoaded 
+                            ? `<span class="text-emerald-600 font-bold text-sm bg-emerald-50 px-3 py-1 rounded-full"><i class="fa-solid fa-check"></i> Listo</span>` 
+                            : `<button onclick="savePlanillaRow('${schoolId}', '${mesaFormat}', ${m})" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm hover:bg-blue-700 hover:shadow transition-all w-full tracking-wide">GUARDAR</button>`
+                        }
+                    </td>
+                </tr>`;
+            }
+
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function savePlanillaRow(schoolId, mesaStr, rowIndex) {
+            const sInput = document.getElementById(`pl_sobres_${rowIndex}`);
+            if(!sInput || sInput.value === '') {
+                showToast(`Mesa ${mesaStr}: Ingrese cantidad de sobres.`, 'error'); return;
+            }
+            
+            const sobres = parseInt(sInput.value) || 0;
+            const blancos = parseInt(document.getElementById(`pl_blancos_${rowIndex}`).value) || 0;
+            const nulos = parseInt(document.getElementById(`pl_nulos_${rowIndex}`).value) || 0;
+
+            let votos = {};
+            let sumasPorCargo = {};
+            
+            electionState.candidates.forEach(c => {
+                const val = parseInt(document.getElementById(`pl_voto_${rowIndex}_${c.id}`).value) || 0;
+                votos[c.id] = val;
+                sumasPorCargo[c.cargo] = (sumasPorCargo[c.cargo] || 0) + val;
+            });
+
+            let maxSumaVotos = 0;
+            for(let cargo in sumasPorCargo) {
+                if(sumasPorCargo[cargo] > maxSumaVotos) maxSumaVotos = sumasPorCargo[cargo];
+            }
+
+            const totalCalculado = maxSumaVotos + blancos + nulos;
+
+            if (totalCalculado > sobres) {
+                showDialog(
+                    `<i class="fa-solid fa-triangle-exclamation text-red-500"></i> Error en Mesa ${mesaStr}`,
+                    `La suma total calculada (${totalCalculado}) supera a los sobres ingresados (${sobres}). Revisa los datos.`,
+                    null
+                );
+                return;
+            }
+
+            // Save
+            const newActa = {
+                id: 'acta_' + Date.now(),
+                escuelaId: schoolId,
+                mesa: mesaStr,
+                sobres, blancos, nulos, votos,
+                timestamp: new Date().toISOString()
+            };
+
+            electionState.actas.push(newActa);
+            saveState();
+            updateDashboard();
+            renderActsTable();
+            renderPlanillaGrid(); // Re-render to lock the row
+            showToast(`Mesa ${mesaStr} guardada con éxito.`, 'success');
+        }
+
+
+        // --- TABLA DE AUDITORÍA ---
+        function renderActsTable() {
+            const tbody = document.getElementById('actsTableBody');
+            const search = document.getElementById('searchMesa').value.toLowerCase();
+            const emptyState = document.getElementById('emptyActsState');
+            const actas = electionState.actas;
+
+            tbody.innerHTML = '';
+
+            let filtered = actas.filter(a => {
+                const esc = electionState.schools.find(s => s.id === a.escuelaId);
+                const escName = esc ? esc.name.toLowerCase() : '';
+                return a.mesa.toLowerCase().includes(search) || escName.includes(search);
+            });
+            
+            // Orden descendente por tiempo (últimos arriba)
+            filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if(filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                tbody.parentElement.classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                tbody.parentElement.classList.remove('hidden');
+                
+                filtered.forEach(acta => {
+                    const date = new Date(acta.timestamp);
+                    const timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' hs';
+                    const esc = electionState.schools.find(s => s.id === acta.escuelaId);
+                    const escuelaName = esc ? esc.name : 'Desc.';
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition-colors';
+                    tr.innerHTML = `
+                        <td class="p-4 text-sm text-slate-500 whitespace-nowrap"><i class="fa-regular fa-clock mr-1"></i> ${timeStr}</td>
+                        <td class="p-4 text-sm font-semibold text-slate-700">${escuelaName}</td>
+                        <td class="p-4 font-mono font-bold text-slate-800 text-base">#${acta.mesa}</td>
+                        <td class="p-4 text-center text-sm font-bold text-blue-600 bg-blue-50/50">${acta.sobres}</td>
+                        <td class="p-4 text-center text-sm text-slate-600">${acta.blancos}</td>
+                        <td class="p-4 text-center text-sm text-slate-600">${acta.nulos}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="deleteActa('${acta.id}', '${acta.mesa}')" class="text-red-500 hover:text-white bg-red-50 hover:bg-red-500 p-2 rounded-lg transition-colors shadow-sm" title="Anular Acta">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function deleteActa(actaId, mesaNum) {
+            showDialog(
+                `<i class="fa-solid fa-trash-can text-red-500"></i> Anular Acta #${mesaNum}`,
+                `¿Confirmas la anulación de esta acta? Los cómputos generales y la planilla se actualizarán restando estos votos.`,
+                () => {
+                    electionState.actas = electionState.actas.filter(a => a.id !== actaId);
+                    saveState();
+                    updateDashboard();
+                    renderActsTable();
+                    if(document.getElementById('planilla').classList.contains('active')) renderPlanillaGrid();
+                    showToast(`Acta #${mesaNum} anulada exitosamente`, 'success');
+                }
+            );
+        }
+
+        // --- CONFIGURACIÓN ---
+        function loadSavedConfigToInputs() {
+            document.getElementById('confTitle').value = electionState.config.title;
+            document.getElementById('confPadron').value = electionState.config.totalPadron;
+            document.getElementById('confMesas').value = electionState.config.mesasHabilitadas;
+        }
+
+        function saveGlobalConfig() {
+            const title = document.getElementById('confTitle').value.trim() || 'Elecciones';
+            electionState.config.title = title;
+            electionState.config.totalPadron = parseInt(document.getElementById('confPadron').value) || 0;
+            electionState.config.mesasHabilitadas = parseInt(document.getElementById('confMesas').value) || 0;
+            
+            saveState();
+            document.getElementById('dashElectionTitle').innerText = title;
+            updateDashboard();
+            showToast('Parámetros guardados correctamente.', 'success');
+        }
+
+        function renderConfigLists() {
+            // Schools
+            const slist = document.getElementById('confSchoolsList');
+            slist.innerHTML = '';
+            electionState.schools.forEach(s => {
+                slist.innerHTML += `<tr class="border-b hover:bg-slate-50">
+                    <td class="px-4 py-3 font-semibold text-slate-700">${s.name}</td>
+                    <td class="px-4 py-3 text-center font-mono bg-slate-50/50">${s.mesaStart}</td>
+                    <td class="px-4 py-3 text-center font-mono bg-slate-50/50">${s.mesaEnd}</td>
+                    <td class="px-4 py-3 text-right"><button onclick="deleteSchool('${s.id}')" class="text-red-400 hover:text-red-600 p-1.5 rounded bg-red-50"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+
+            // Parties
+            const plist = document.getElementById('confPartiesList');
+            plist.innerHTML = '';
+            electionState.parties.forEach(p => {
+                plist.innerHTML += `
+                    <div class="border border-slate-200 p-3 rounded-xl flex items-center justify-between bg-white shadow-sm hover:border-slate-300 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <div class="w-5 h-5 rounded-full shadow-inner" style="background-color: ${p.color}"></div>
+                            <span class="font-bold text-sm text-slate-700">${p.name}</span>
+                        </div>
+                        <button onclick="deleteParty('${p.id}')" class="text-slate-400 hover:text-red-500 bg-slate-50 p-1.5 rounded-lg"><i class="fa-solid fa-trash text-sm"></i></button>
+                    </div>
+                `;
+            });
+
+            // Candidates
+            const clist = document.getElementById('confCandidatesList');
+            clist.innerHTML = '';
+            electionState.candidates.forEach(c => {
+                const party = electionState.parties.find(p => p.id === c.partyId) || { name: 'N/A' };
+                clist.innerHTML += `<tr class="border-b hover:bg-slate-50">
+                    <td class="px-4 py-3 font-bold text-slate-800">${c.name}</td>
+                    <td class="px-4 py-3"><span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-bold">${c.cargo}</span></td>
+                    <td class="px-4 py-3 text-sm font-medium text-slate-600">${party.name}</td>
+                    <td class="px-4 py-3 text-right"><button onclick="deleteCandidate('${c.id}')" class="text-red-400 hover:text-red-600 p-1.5 rounded bg-red-50"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+
+            populateSchoolSelects();
+            renderCandidateInputsInForm();
+        }
+
+        // Modals Open/Close & Saves
+        function showAddSchoolModal() {
+            document.getElementById('inpSchName').value = '';
+            document.getElementById('inpSchMesaStart').value = '';
+            document.getElementById('inpSchMesaEnd').value = '';
+            document.getElementById('modalAddSchool').classList.remove('hidden');
+        }
+        function saveNewSchool() {
+            const name = document.getElementById('inpSchName').value.trim();
+            const start = parseInt(document.getElementById('inpSchMesaStart').value);
+            const end = parseInt(document.getElementById('inpSchMesaEnd').value);
+            if(!name || !start || !end || start > end) { showToast('Revisa los datos de la escuela', 'error'); return; }
+            electionState.schools.push({ id: 's_'+Date.now(), name, mesaStart: start, mesaEnd: end });
+            saveState(); renderConfigLists();
+            document.getElementById('modalAddSchool').classList.add('hidden');
+            showToast('Escuela agregada', 'success');
+        }
+        function deleteSchool(id) {
+            electionState.schools = electionState.schools.filter(s => s.id !== id);
+            saveState(); renderConfigLists();
+        }
+
+        function showAddPartyModal() {
+            document.getElementById('inpPartyName').value = '';
+            document.getElementById('inpPartyColor').value = '#3b82f6';
+            document.getElementById('modalAddParty').classList.remove('hidden');
+        }
+        function saveNewParty() {
+            const name = document.getElementById('inpPartyName').value.trim();
+            const color = document.getElementById('inpPartyColor').value;
+            if(!name) return;
+            electionState.parties.push({ id: 'p_'+Date.now(), name, color });
+            saveState(); renderConfigLists();
+            document.getElementById('modalAddParty').classList.add('hidden');
+            showToast('Partido agregado', 'success');
+        }
+        function deleteParty(id) {
+            electionState.parties = electionState.parties.filter(p => p.id !== id);
+            saveState(); renderConfigLists();
+        }
+
+        function showAddCandidateModal() {
+            if(electionState.parties.length === 0) {
+                showToast('Primero debes crear un Partido Político', 'error');
+                return;
+            }
+            const sel = document.getElementById('inpCandParty');
+            sel.innerHTML = electionState.parties.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            document.getElementById('inpCandName').value = '';
+            document.getElementById('modalAddCandidate').classList.remove('hidden');
+        }
+        function saveNewCandidate() {
+            const name = document.getElementById('inpCandName').value.trim();
+            const cargo = document.getElementById('inpCandCargo').value;
+            const partyId = document.getElementById('inpCandParty').value;
+            if(!name || !partyId) return;
+            electionState.candidates.push({ id: 'c_'+Date.now(), name, partyId, cargo });
+            saveState(); renderConfigLists();
+            document.getElementById('modalAddCandidate').classList.add('hidden');
+            showToast('Candidato agregado', 'success');
+        }
+        function deleteCandidate(id) {
+            electionState.candidates = electionState.candidates.filter(c => c.id !== id);
+            saveState(); renderConfigLists();
+        }
+
+        // Full Reset
+        function promptResetAllData() {
+            showDialog(
+                '<i class="fa-solid fa-skull-crossbones text-red-600"></i> BORRADO TOTAL',
+                '¿Estás absolutamente seguro? Se eliminarán actas, escuelas, partidos y candidatos. No se puede deshacer.',
+                () => {
+                    const currentPwd = electionState.config.adminPassword; // Keep password safe
+                    electionState = {
+                        config: { title: "Nueva Elección", totalPadron: 0, mesasHabilitadas: 0, adminPassword: currentPwd },
+                        parties: [],
+                        candidates: [],
+                        schools: [],
+                        actas: []
+                    };
+                    saveState();
+                    loadSavedConfigToInputs();
+                    renderConfigLists();
+                    updateDashboard();
+                    renderActsTable();
+                    
+                    document.getElementById('dashElectionTitle').innerText = "Nueva Elección";
+                    
+                    showToast('Sistema formateado a cero correctamente.', 'success');
+                }
+            );
+        }
+
+    </script>
+</body>
+</html>
